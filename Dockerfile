@@ -3,8 +3,6 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y gnupg2
 RUN apt-get install -y apt-transport-https wget
-RUN wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | apt-key add -
-RUN echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-org/4.2 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-4.2.list
 # Dependencies
 # whatweb as whatweb
 # nikto as nikto
@@ -12,7 +10,6 @@ RUN echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu xenial/mongodb-
 RUN apt-get update && \
 	apt-get install -y python3 && \
 	apt-get install -y python3.7 python3.7-dev && \
-	apt-get install -y python3-tk && \
 	apt-get install -y wget && \
 	apt-get install -y curl && \
 	apt-get install -y nmap && \
@@ -23,7 +20,6 @@ RUN apt-get update && \
 	apt-get install -y python3-dev && \
 	apt-get install -y libssl-dev && \
 	apt-get install -y libffi-dev && \
-	apt-get install -y mongodb-org-tools && \
 	apt-get install -y python-requests && \
 	apt-get install -y ruby ruby-dev && \
 	apt-get install -y bsdmainutils && \
@@ -67,7 +63,7 @@ RUN gem install ssh_scan
 
 
 # crtsh as crtsh.py
-COPY crtsh /home/crtsh
+COPY tools/crtsh /home/crtsh
 RUN pip3 install feedparser && \
 	chmod +x /home/crtsh/crtsh.py && \
 	ln -s /home/crtsh/crtsh.py /usr/bin/crtsh.py
@@ -108,7 +104,7 @@ RUN git clone https://github.com/offensive-security/exploitdb.git /opt/exploitdb
 RUN sed 's|path_array+=(.*)|path_array+=("/opt/exploitdb")|g' /opt/exploitdb/.searchsploit_rc > ~/.searchsploit_rc
 RUN ln -sf /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
 #OPenrelay
-COPY smtp-open-relay.nse /usr/share/nmap/scripts/smtp-open-relay.nse
+COPY tools/smtp-open-relay.nse /usr/share/nmap/scripts/smtp-open-relay.nse
 
 # Set timezone
 ENV TZ Europe/Paris
@@ -124,7 +120,7 @@ RUN python3.7 -m pip install --upgrade asn1crypto
 RUN pip install .
 RUN cme smb
 # Pollenisator
-WORKDIR /home/
+WORKDIR /home/Pollenisator
 COPY requirements.txt /tmp
 RUN python3 -m pip install -r /tmp/requirements.txt
 CMD ["/bin/bash", "-c", "/home/Pollenisator/startWorker.sh"]

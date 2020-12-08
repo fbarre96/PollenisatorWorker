@@ -106,8 +106,6 @@ RUN ln -sf /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
 #OPenrelay
 COPY tools/smtp-open-relay.nse /usr/share/nmap/scripts/smtp-open-relay.nse
 
-# Set timezone
-ENV TZ Europe/Paris
 
 #CME
 RUN python3.7 /get-pip.py
@@ -122,5 +120,11 @@ RUN cme smb
 # Pollenisator
 WORKDIR /home/Pollenisator
 COPY requirements.txt /tmp
+
+# Set timezone
+RUN apt-get install -y tzdata
+ENV TZ Europe/Paris
+#RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 RUN python3 -m pip install -r /tmp/requirements.txt
 CMD ["/bin/bash", "-c", "/home/Pollenisator/startWorker.sh"]

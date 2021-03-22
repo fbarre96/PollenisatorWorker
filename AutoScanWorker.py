@@ -67,13 +67,13 @@ def workerLoop(workerName):
         print("stop received...")
         apiclient.unregisterWorker(workerName)
 
-def launchTask(calendarName, worker, launchableTool):
+def launchTask(workerToken, calendarName, worker, launchableTool):
     launchableToolId = launchableTool.getId()
     launchableTool.markAsRunning(worker)
     # Mark the tool as running (scanner_ip is set and dated is set, datef is "None")
     from AutoScanWorker import executeCommand
     print("Launching command "+str(launchableTool))
-    p = Process(target=executeCommand, args=(calendarName, launchableToolId))
+    p = Process(target=executeCommand, args=(workerToken, calendarName, launchableToolId))
     p.start()
     # Append to running tasks this  result and the corresponding tool id
     return True
@@ -83,7 +83,7 @@ def editToolConfig(command_name, remote_bin, plugin):
     tools_to_register[command_name] = {"bin":remote_bin, "plugin":plugin}
     Utils.saveToolsConfig(tools_to_register)
 
-def executeCommand(calendarName, toolId, parser=""):
+def executeCommand(workerToken, calendarName, toolId, parser=""):
     """
      remote task
     Execute the tool with the given toolId on the given calendar name.
@@ -102,7 +102,8 @@ def executeCommand(calendarName, toolId, parser=""):
     """
     # Connect to given calendar
     apiclient = APIClient.getInstance()
-    apiclient.setCurrentPentest(calendarName)
+    apiclient.setToken(workerToken)
+    apiclient.currentPentest = calendarName # by pass login
     toolModel = Tool.fetchObject({"_id":ObjectId(toolId)})
     command_o = toolModel.getCommand()
     msg = ""

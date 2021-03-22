@@ -49,9 +49,8 @@ RUN python2 -m pip install setuptools
 RUN git clone https://github.com/guelfoweb/knock.git /home/knock && \
 	cd /home/knock && \
 	chmod +x /home/knock/knockpy/knockpy.py && \
-	python2 /home/knock/setup.py install && \
-	ln -s /home/knock/knockpy/knockpy.py /usr/bin/knockpy.py && \
-	cp -r /home/knock/knockpy/wordlist /usr/bin/wordlist
+	python3 /home/knock/setup.py install && \
+	ln -s /home/knock/knockpy/knockpy.py /usr/bin/knockpy.py
 
 # Sublist3r as sublist3r.py
 RUN git clone https://github.com/aboul3la/Sublist3r.git /home/sublist3r/ && \

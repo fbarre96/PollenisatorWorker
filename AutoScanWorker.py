@@ -149,7 +149,7 @@ def executeCommand(workerToken, calendarName, toolId, parser=""):
         returncode = Utils.execute(comm, timeLimit, True)
         if returncode == -1:
             toolModel.setStatus(["timedout"])
-            return False, str(e)
+            return False, str("Command timedout")
     except Exception as e:
         print(str(e))
         toolModel.setStatus(["error"])

@@ -140,13 +140,16 @@ def executeCommand(workerToken, calendarName, toolId, parser=""):
     if command_o is not None:
         timeLimit = min(datetime.now()+timedelta(0, int(command_o.get("timeout", 0))), timeLimit)
     ##
+    if "timedout" in toolModel.status:
+        timeLimit = None
     try:
         print(('TASK STARTED:'+toolModel.name))
         print("Will timeout at "+str(timeLimit))
         # Execute the command with a timeout
         returncode = Utils.execute(comm, timeLimit, True)
-        if returncode == -1:
-            raise Exception("Tool Timeout")
+        if returncode == -1:toolModel
+            toolModel.setStatus(["timedout"])
+            return False, str(e)
     except Exception as e:
         print(str(e))
         toolModel.setStatus(["error"])

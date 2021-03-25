@@ -147,7 +147,7 @@ def executeCommand(workerToken, calendarName, toolId, parser=""):
         print("Will timeout at "+str(timeLimit))
         # Execute the command with a timeout
         returncode = Utils.execute(comm, timeLimit, True)
-        if returncode == -1:toolModel
+        if returncode == -1:
             toolModel.setStatus(["timedout"])
             return False, str(e)
     except Exception as e:

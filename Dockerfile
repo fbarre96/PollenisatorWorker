@@ -43,14 +43,6 @@ RUN pip3 install --upgrade setuptools
 RUN git clone https://github.com/maurosoria/dirsearch.git /home/dirsearch/ && \
 	chmod +x /home/dirsearch/dirsearch.py && \
 	ln -s /home/dirsearch/dirsearch.py /usr/bin/dirsearch.py
-# Knockpy as knockpy.py
-RUN apt-get install -y python-dnspython python-pip
-RUN python2 -m pip install setuptools
-RUN git clone https://github.com/guelfoweb/knock.git /home/knock && \
-	cd /home/knock && \
-	chmod +x /home/knock/knockpy/knockpy.py && \
-	python3 /home/knock/setup.py install && \
-	ln -s /home/knock/knockpy/knockpy.py /usr/bin/knockpy.py
 
 # Sublist3r as sublist3r.py
 RUN git clone https://github.com/aboul3la/Sublist3r.git /home/sublist3r/ && \
@@ -116,6 +108,16 @@ RUN python3.7 -m pip install --upgrade cryptography
 RUN python3.7 -m pip install --upgrade asn1crypto
 RUN pip install .
 RUN cme smb
+
+# Knockpy as knockpy.py
+RUN apt-get install -y python-dnspython
+RUN python3.7 -m pip install setuptools
+RUN git clone https://github.com/guelfoweb/knock.git /home/knock && \
+	cd /home/knock && \
+	chmod +x /home/knock/knockpy/knockpy.py && \
+	python3.7 /home/knock/setup.py install && \
+	ln -s /home/knock/knockpy/knockpy.py /usr/bin/knockpy.py
+
 # Pollenisator
 WORKDIR /home/Pollenisator
 COPY requirements.txt /tmp

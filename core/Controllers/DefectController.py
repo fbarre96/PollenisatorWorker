@@ -2,7 +2,7 @@
 
 import os
 from core.Controllers.ControllerElement import ControllerElement
-
+import core.Models.Defect as Defect
 
 class DefectController(ControllerElement):
     """Inherits ControllerElement
@@ -60,11 +60,7 @@ class DefectController(ControllerElement):
         notes = values["Notes"]
         proof = values["Proof"]
         proofs = []
-        tableau_from_ease = {"Facile": {"Mineur": "Majeur", "Important": "Majeur", "Majeur": "Critique", "Critique": "Critique"},
-                             "Modérée": {"Mineur": "Important", "Important": "Important", "Majeur": "Majeur", "Critique": "Critique"},
-                             "Difficile": {"Mineur": "Mineur", "Important": "Important", "Majeur": "Majeur", "Critique": "Majeur"},
-                             "Très difficile": {"Mineur": "Mineur", "Important": "Mineur", "Majeur": "Important", "Critique": "Important"}}
-        risk = tableau_from_ease.get(ease,{}).get(impact,"N/A")
+        risk = Defect.Defect.getRisk(ease, impact)
         self.model.initialize(ip, port, proto, title, ease,
                               impact, risk, redactor, mtype, notes, proofs)
         ret, _ = self.model.addInDb()

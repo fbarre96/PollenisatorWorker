@@ -128,4 +128,5 @@ ENV TZ Europe/Paris
 #RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN python3 -m pip install -r /tmp/requirements.txt
+WORKDIR /home/Pollenisator
 CMD ["/bin/bash", "-c", "/home/Pollenisator/startWorker.sh"]

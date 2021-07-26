@@ -15,50 +15,47 @@
 
 Everything is the [wiki](https://github.com/AlgoSecure/Pollenisator/wiki/_Sidebar), including [installation](https://github.com/Algosecure/Pollenisator/wiki/Overview)
 
-## Features ##
+## Install Docker (default tools) ##
+If not cloned yet , clone it:
 
-  * Register your own tools
-    * Add command line options in your database.
-    * Create your own light plugin to parse your tool output.
-    * Use the objects Models to add, update or delete objects to the pentest inside plugins.
-    * Limit the number of parallel execution of noisy/heavy tools
+`$ git clone https://github.com/Algosecure/PollenisatorWorker.git`
 
-  * Define a recon/fingerprinting procedure with custom tools
-    * Choose a period to start and stop the tools
-    * Define your scope with domains and network IP ranges.
-    * Custom settings to include new hosts in the scope
-    * Keep results of all files generated through tools executions
-    * Start the given docker to implement numerous tools for LAN and Web pentest
+`$ cd PollenisatorWorker`
 
-  * Collaborative pentests
-    * Split the work between your machines by starting one worker by computer you want to use.
-    * Tags ip or tools to show your team mates that you powned it.
-    * Take notes on every object to keep trace of your discoveries
-    * Follow tools status live
-    * Search in all your objects properties with the fitler bar.
-    * have a quick summary of all hosts and their open ports and check if some are powned.
+This docker takes me ~9 minutes to install on a 10 Mbps connection and 5 minutes to install on high speed connection (255 Mbps).
 
-  * Reporting
-    * Create security defects on IPs and ports
-    * Make your plugins create defects directly so you don't have to
-    * Generate a Word report of security defects found. You can use your own template with extra work.
-    * Generate a Powerpoint report of security defects found. You can use your own template with extra work.
+It comes with all the tools described in [this page](https://github.com/Algosecure/Pollenisator/wiki/Default-tools)
 
-  * Currently integrated tools
-    * IP / port recon : Nmap (Quick nmaps followed by thorough scan)
-    * Domain enumeration : Knockpy, Sublist3r, dig reverse, crtsh
-    * Web : WhatWeb, Nikto, http methods, Dirsearch
-    * LAN : Crackmapexec, eternalblue and bluekeep scan, smbmap, anonymous ftp, enum4linux
-    * Unknown ports : amap, nmap scripts
-    * Misc : ikescan, ssh_scan, openrelay
-    
-   
-## Roadmap ##
+Build the docker using this command:
 
-  * Change the architecture to an API based one
-  * Get rid of Celery
-  * Add flexibity for commands
-  * Improve UX
-  * Add more plugin and improve existing ones
-  * Add real support for users / authenticated commands
-  
+`$ docker build -t pollenisatorworker .`
+
+## Manual Install ##
+
+**WARNING** : Any user of pollenisator can claim your worker and launch commands on it, which means any user can take control of your worker server.
+This why the docker is recommended as it limits what is visible (LAN, home folder...)
+
+
+A worker is supposed to have a set of tools ready to use. Each of this tool may be installed as you want but then you have to complete the tool configuration file located in the *config/tools.d/* directory
+
+First, clone the PollenisatorWorker repo if not done already
+
+`$ git clone https://github.com/Algosecure/PollenisatorWorker
+`$ cd PollenisatorWorker`
+
+Then install requirements :
+
+`$ sudo python3 -m pip install -r requirements.txt`
+
+`$ ./startWorker.sh`
+
+### Install tools
+
+Pollenisator come with plugins and commands. If you want to use them, you have to install [those tools](https://github.com/Algosecure/Pollenisator/wiki/Default-tools)
+
+### Configure tools
+
+To register tools you  have to edit the config/tools.d/tools.json file.
+You can do it from the PollenisatorGUI client or from your text editor by adding an item inside the list which looks like [{"<pollenisator_command_name>":{"bin":"<The command line to summon the wanted tool binary/script>", "plugin":"<Pollenisator_plugin.py>"}}]
+
+

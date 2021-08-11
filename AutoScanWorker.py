@@ -102,8 +102,8 @@ def executeCommand(workerToken, calendarName, toolId, parser=""):
     """
     # Connect to given calendar
     apiclient = APIClient.getInstance()
-    apiclient.setToken(workerToken)
-    apiclient.currentPentest = calendarName # by pass login
+    apiclient.setToken(workerToken) 
+    apiclient.currentPentest = calendarName # bypass login by not using connectToDb
     toolModel = Tool.fetchObject({"_id":ObjectId(toolId)})
     command_o = toolModel.getCommand()
     msg = ""
@@ -182,7 +182,8 @@ def stopCommand(pentest, tool_iid, running_tasks):
             print("STOPPING command "+str(tool_iid)+" ... Done")
             break
         i += 1
-    del running_tasks[i]
+    if i < len(running_tasks):
+        del running_tasks[i]
 
 def getWaveTimeLimit(waveName):
     """

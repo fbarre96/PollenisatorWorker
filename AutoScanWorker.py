@@ -15,77 +15,62 @@ import core.Components.Utils as Utils
 from core.Models.Interval import Interval
 from core.Models.Tool import Tool
 from core.Models.Command import Command
+import socketio
 import socket
 
-
+sio = socketio.Client()
+running_tasks = []
 
 def main():
     """Main function. Start a worker instance
     """
+    global sio
     apiclient = APIClient.getInstance()
+    if apiclient.tryConnection():
+        sio.connect(apiclient.api_url)
+    else:
+        print("Unable to reach the API "+str(apiclient.api_url))
+        sys.exit(0)
     tools_to_register = Utils.loadToolsConfig()
+    
     print("Registering commands : "+str(list(tools_to_register.keys())))
     myname = str(uuid.uuid4())+"@"+socket.gethostname()
-    apiclient.registeredCommands(myname, list(tools_to_register.keys()))
-    p = Process(target=workerLoop, args=(myname,))
-    try:
-        p.start()
-        p.join()
-    except(KeyboardInterrupt, SystemExit):
-        pass
+    sio.emit("registerCommands", {"workerName":myname, "tools":list(tools_to_register.keys())})
+    sio.wait()
+    apiclient.unregisterWorker(myname)
 
-def workerLoop(workerName):
+# def workerLoop(workerName):
+#     """
+#     Start monitoring events
+#     Will stop when receiving a KeyboardInterrupt
+#     Args:
+#         calendar: the pentest database name to monitor
+#     """
+#     print("Starting worker thread")
+#     apiclient = APIClient.getInstance()
+#     try:
+#         while(True):
+#             time.sleep(3)
+
+#     except(KeyboardInterrupt, SystemExit):
+#         print("stop received...")
+#         apiclient.unregisterWorker(workerName)
+  
+
+@sio.event
+def executeCommand(data):
+    workerToken = data.get("workerToken")
+    pentest  = data.get("pentest")
+    toolId = data.get("toolId")
+    parser = data.get("parser", "")
+    task = Process(target=doExecuteCommand, args=[workerToken, pentest, toolId, parser]) 
+    global running_tasks
+    running_tasks.append([pentest, toolId, task])
+    task.start()
+
+def doExecuteCommand(workerToken, calendarName, toolId, parser=""):
     """
-    Start monitoring events
-    Will stop when receiving a KeyboardInterrupt
-    Args:
-        calendar: the pentest database name to monitor
-    """
-    print("Starting worker thread")
-    functions = {
-        "executeCommand": executeCommand,
-        "editToolConfig": editToolConfig,
-    }
-    running_tasks = []
-    apiclient = APIClient.getInstance()
-    try:
-        while(True):
-            time.sleep(3)
-            instructions = apiclient.fetchWorkerInstruction(workerName)
-            if instructions is None:
-                continue
-            for instruction in instructions:
-                if instruction["function"] in functions:
-                    task = Process(target = functions[instruction["function"]], args=instruction["args"])
-                    task.start()
-                if instruction["function"] == "executeCommand":
-                    running_tasks.append(instruction["args"]+[task])
-                elif instruction["function"] == "stopCommand":
-                    stopCommand(*instruction["args"], running_tasks)
-
-    except(KeyboardInterrupt, SystemExit):
-        print("stop received...")
-        apiclient.unregisterWorker(workerName)
-
-def launchTask(workerToken, calendarName, worker, launchableTool):
-    launchableToolId = launchableTool.getId()
-    launchableTool.markAsRunning(worker)
-    # Mark the tool as running (scanner_ip is set and dated is set, datef is "None")
-    from AutoScanWorker import executeCommand
-    print("Launching command "+str(launchableTool))
-    p = Process(target=executeCommand, args=(workerToken, calendarName, launchableToolId))
-    p.start()
-    # Append to running tasks this  result and the corresponding tool id
-    return True
-
-def editToolConfig(command_name, remote_bin, plugin):
-    tools_to_register = Utils.loadToolsConfig()
-    tools_to_register[command_name] = {"bin":remote_bin, "plugin":plugin}
-    Utils.saveToolsConfig(tools_to_register)
-
-def executeCommand(workerToken, calendarName, toolId, parser=""):
-    """
-     remote task
+    remote task
     Execute the tool with the given toolId on the given calendar name.
     Then execute the plugin corresponding.
     Any unhandled exception will result in a task-failed event in the class.
@@ -100,7 +85,6 @@ def executeCommand(workerToken, calendarName, toolId, parser=""):
         Exception: if an exception unhandled occurs during the bash command execution.
         Exception: if a plugin considered a failure.
     """
-    # Connect to given calendar
     apiclient = APIClient.getInstance()
     apiclient.setToken(workerToken) 
     apiclient.currentPentest = calendarName # bypass login by not using connectToDb
@@ -171,19 +155,32 @@ def executeCommand(workerToken, calendarName, toolId, parser=""):
         print(msg)
         time.sleep(float(command_o.get("sleep_between", 0)))
     return True, ""
-    
-def stopCommand(pentest, tool_iid, running_tasks):
+
+@sio.event
+def stopCommand(data):
+    pentest = data.get("pentest")
+    tool_iid = data.get("tool_iid")
+    global running_tasks
     i = 0
     for running in running_tasks:
         if running[0] == pentest and running[1] == tool_iid:
             print("STOPPING command "+str(tool_iid)+" ...")
-            running[3].terminate()
-            running[3].join()
+            running[2].terminate()
+            running[2].join()
             print("STOPPING command "+str(tool_iid)+" ... Done")
             break
         i += 1
     if i < len(running_tasks):
         del running_tasks[i]
+
+
+@sio.event
+def editToolConfig(data):
+    command_name = data["command_name"]
+    tools_to_register = Utils.loadToolsConfig()
+    tools_to_register[command_name] = {"bin":data.get("remote_bin"), "plugin":data.get("plugin")}
+    Utils.saveToolsConfig(tools_to_register)
+
 
 def getWaveTimeLimit(waveName):
     """

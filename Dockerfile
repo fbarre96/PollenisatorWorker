@@ -118,6 +118,11 @@ RUN git clone https://github.com/guelfoweb/knock.git /home/knock && \
 	python3.7 /home/knock/setup.py install && \
 	ln -s /home/knock/knockpy/knockpy.py /usr/bin/knockpy.py
 
+# Nuclei
+RUN wget -c https://dl.google.com/go/go1.17.3.linux-amd64.tar.gz -O - | tar xzv -C /usr/local/
+ENV PATH=$PATH:/usr/local/go/bin
+RUN git clone https://github.com/projectdiscovery/nuclei.git /home/nuclei && cd /home/nuclei/v2/cmd/nuclei && go build && mv nuclei /usr/local/bin/ && nuclei -ut
+
 # Pollenisator
 WORKDIR /home/Pollenisator
 COPY requirements.txt /tmp

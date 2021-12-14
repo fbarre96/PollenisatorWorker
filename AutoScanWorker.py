@@ -90,13 +90,24 @@ def doExecuteCommand(workerToken, calendarName, toolId, parser=""):
     apiclient.currentPentest = calendarName # bypass login by not using connectToDb
     toolModel = Tool.fetchObject({"_id":ObjectId(toolId)})
     command_o = toolModel.getCommand()
+    tools_registered = Utils.loadToolsConfig()
     msg = ""
+    if parser == "":
+        try:
+            parser = tools_registered[command_o["name"]]["plugin"]
+        except:
+            print("plugin not found on worker")
     ##
     success, comm, fileext = apiclient.getCommandline(toolId, parser)
     if not success:
         print(str(comm))
         toolModel.setStatus(["error"])
         return False, str(comm)
+    bin_path = tools_registered[toolModel.name].get("bin")
+    if bin_path is not None:
+        if not bin_path.endswith(" "):
+            bin_path = bin_path+" "
+    comm = bin_path+comm
     outputRelDir = toolModel.getOutputDir(calendarName)
     abs_path = os.path.dirname(os.path.abspath(__file__))
     toolFileName = toolModel.name+"_" + \

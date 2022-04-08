@@ -14,7 +14,6 @@ from core.Components.apiclient import APIClient
 import core.Components.Utils as Utils
 from core.Models.Interval import Interval
 from core.Models.Tool import Tool
-from core.Models.Command import Command
 import socketio
 import socket
 
@@ -31,44 +30,24 @@ def main():
     else:
         print("Unable to reach the API "+str(apiclient.api_url))
         sys.exit(0)
-    tools_to_register = Utils.loadToolsConfig()
     
-    print("Registering commands : "+str(list(tools_to_register.keys())))
     myname = str(uuid.uuid4())+"@"+socket.gethostname()
-    sio.emit("registerCommands", {"workerName":myname, "tools":list(tools_to_register.keys())})
+    sio.emit("register", {"workerName":myname})
     sio.wait()
     apiclient.unregisterWorker(myname)
-
-# def workerLoop(workerName):
-#     """
-#     Start monitoring events
-#     Will stop when receiving a KeyboardInterrupt
-#     Args:
-#         calendar: the pentest database name to monitor
-#     """
-#     print("Starting worker thread")
-#     apiclient = APIClient.getInstance()
-#     try:
-#         while(True):
-#             time.sleep(3)
-
-#     except(KeyboardInterrupt, SystemExit):
-#         print("stop received...")
-#         apiclient.unregisterWorker(workerName)
   
 
 @sio.event
 def executeCommand(data):
     workerToken = data.get("workerToken")
-    pentest  = data.get("pentest")
+    pentest = data.get("pentest")
     toolId = data.get("toolId")
-    parser = data.get("parser", "")
-    task = Process(target=doExecuteCommand, args=[workerToken, pentest, toolId, parser]) 
+    task = Process(target=doExecuteCommand, args=[workerToken, pentest, toolId]) 
     global running_tasks
     running_tasks.append([pentest, toolId, task])
     task.start()
 
-def doExecuteCommand(workerToken, calendarName, toolId, parser=""):
+def doExecuteCommand(workerToken, calendarName, toolId):
     """
     remote task
     Execute the tool with the given toolId on the given calendar name.
@@ -89,21 +68,14 @@ def doExecuteCommand(workerToken, calendarName, toolId, parser=""):
     apiclient.setToken(workerToken) 
     apiclient.currentPentest = calendarName # bypass login by not using connectToDb
     toolModel = Tool.fetchObject({"_id":ObjectId(toolId)})
-    command_o = toolModel.getCommand()
-    tools_registered = Utils.loadToolsConfig()
+    command_dict = toolModel.getCommand()
     msg = ""
-    if parser == "":
-        try:
-            parser = tools_registered[command_o["name"]]["plugin"]
-        except:
-            print("plugin not found on worker")
-    ##
-    success, comm, fileext = apiclient.getCommandline(toolId, parser)
+    success, comm, fileext = apiclient.getCommandline(toolId)
     if not success:
         print(str(comm))
         toolModel.setStatus(["error"])
         return False, str(comm)
-    bin_path = tools_registered[toolModel.name].get("bin")
+    bin_path = command_dict["bin_path"]
     if bin_path is not None:
         if not bin_path.endswith(" "):
             bin_path = bin_path+" "
@@ -132,8 +104,8 @@ def doExecuteCommand(workerToken, calendarName, toolId, parser=""):
     else:
         timeLimit = getWaveTimeLimit(toolModel.wave)
     # adjust timeLimit if the command has a lower timeout
-    if command_o is not None:
-        timeLimit = min(datetime.now()+timedelta(0, int(command_o.get("timeout", 0))), timeLimit)
+    if command_dict is not None:
+        timeLimit = min(datetime.now()+timedelta(0, int(command_dict.get("timeout", 0))), timeLimit)
     ##
     if "timedout" in toolModel.status:
         timeLimit = None
@@ -151,7 +123,8 @@ def doExecuteCommand(workerToken, calendarName, toolId, parser=""):
         return False, str(e)
     # Execute found plugin if there is one
     outputfile = outputDir+fileext
-    msg = apiclient.importToolResult(toolId, parser, outputfile)
+    plugin = "auto-detect" if command_dict["plugin"] == "" else command_dict["plugin"]
+    msg = apiclient.importToolResult(toolId, plugin, outputfile)
     if msg != "Success":
         #toolModel.markAsNotDone()
         print(str(msg))
@@ -159,12 +132,12 @@ def doExecuteCommand(workerToken, calendarName, toolId, parser=""):
         return False, str(msg)
           
     # Delay
-    if command_o is not None:
-        if float(command_o.get("sleep_between", 0)) > 0.0:
+    if command_dict is not None:
+        if float(command_dict.get("sleep_between", 0)) > 0.0:
             msg += " (will sleep for " + \
-                str(float(command_o.get("sleep_between", 0)))+")"
+                str(float(command_dict.get("sleep_between", 0)))+")"
         print(msg)
-        time.sleep(float(command_o.get("sleep_between", 0)))
+        time.sleep(float(command_dict.get("sleep_between", 0)))
     return True, ""
 
 @sio.event
@@ -185,12 +158,12 @@ def stopCommand(data):
         del running_tasks[i]
 
 
-@sio.event
-def editToolConfig(data):
-    command_name = data["command_name"]
-    tools_to_register = Utils.loadToolsConfig()
-    tools_to_register[command_name] = {"bin":data.get("remote_bin"), "plugin":data.get("plugin")}
-    Utils.saveToolsConfig(tools_to_register)
+# @sio.event
+# def editToolConfig(data):
+#     command_name = data["command_name"]
+#     tools_to_register = Utils.loadToolsConfig()
+#     tools_to_register[command_name] = {"bin":data.get("remote_bin"), "plugin":data.get("plugin")}
+#     Utils.saveToolsConfig(tools_to_register)
 
 
 def getWaveTimeLimit(waveName):

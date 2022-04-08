@@ -367,9 +367,9 @@ class APIClient():
         else:
             return False
 
-    def sendLaunchTask(self, tool_iid, plugin="", checks=True, worker=""):
+    def sendLaunchTask(self, tool_iid, checks=True, worker=""):
         api_url = '{0}tools/{1}/launchTask/{2}'.format(self.api_url_base, self.getCurrentPentest(), tool_iid)
-        data = {"checks":checks, "plugin":plugin}
+        data = {"checks":checks}
         response = requests.post(api_url, headers=self.headers, data=json.dumps(data, cls=JSONEncoder), proxies=proxies, verify=False)
         if response.status_code == 200:
             return json.loads(response.content.decode('utf-8'), cls=JSONDecoder)
@@ -432,11 +432,11 @@ class APIClient():
             return json.loads(response.content.decode('utf-8'), cls=JSONDecoder)
         return None
 
-    def getCommandline(self, toolId, parser=""):
-        """Get full command line from toolid and choosen parser, a marker for |outputDir| is to be replaced
+    def getCommandline(self, toolId):
+        """Get full command line from toolid, a marker for |outputDir| is to be replaced
         """
         api_url = '{0}tools/{1}/craftCommandLine/{2}'.format(self.api_url_base, self.getCurrentPentest(), toolId)
-        response = requests.get(api_url, headers=self.headers, params={"plugin":parser}, proxies=proxies, verify=False)
+        response = requests.get(api_url, headers=self.headers, proxies=proxies, verify=False)
         if response.status_code == 200:
             data = json.loads(response.content.decode('utf-8'), cls=JSONDecoder)
             return True, data["comm"], data["ext"]

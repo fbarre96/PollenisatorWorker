@@ -4,8 +4,6 @@ from core.Models.Element import Element
 from core.Components.apiclient import APIClient
 from bson.objectid import ObjectId
 from datetime import datetime
-import core.Components.Utils as Utils
-import re
 
 class Tool(Element):
     """
@@ -21,7 +19,7 @@ class Tool(Element):
         Args:
             valueFromDb: a dict holding values to load into the object. A mongo fetched interval is optimal.
                         possible keys with default values are : _id(None), parent(None), tags([]), infos({}),
-                        name(""), wave(""), scope(""), ip(""), port(""), proto("tcp"), lvl(""), text(""), dated("None"),
+                        command_iid(""), wave(""),  name(""), scope(""), ip(""), port(""), proto("tcp"), lvl(""), text(""), dated("None"),
                         datef("None"), scanner_ip("None"), status([]), notes(""), resultfile("")
         """
         if valuesFromDb is None:
@@ -33,7 +31,8 @@ class Tool(Element):
         self.scanner_ip = "None"
         self.resultfile = ""
         self.status = []
-        self.initialize(valuesFromDb.get("name", ""), valuesFromDb.get("wave", ""),
+        self.initialize(valuesFromDb.get("command_iid", ""), valuesFromDb.get("wave", ""),
+                        valuesFromDb.get("name", ""),
                         valuesFromDb.get(
                             "scope", ""), valuesFromDb.get("ip", ""),
                         str(valuesFromDb.get("port", "")), valuesFromDb.get(
@@ -45,11 +44,12 @@ class Tool(Element):
                         valuesFromDb.get(
                             "scanner_ip", "None"), valuesFromDb.get("status", []), valuesFromDb.get("notes", ""), valuesFromDb.get("resultfile", ""), valuesFromDb.get("tags", []), valuesFromDb.get("infos", {}))
 
-    def initialize(self, name, wave="", scope="", ip="", port="", proto="tcp", lvl="", text="",
+    def initialize(self, command_iid, wave="", name="", scope="", ip="", port="", proto="tcp", lvl="", text="",
                    dated="None", datef="None", scanner_ip="None", status=None, notes="", resultfile="", tags=None, infos=None):
         
         """Set values of tool
         Args:
+            command_iid: command associated for the tool 
             name: name of the tool (should match a command name)
             wave: the target wave name of this tool (only if lvl is "wave"). Default  ""
             scope: the scope string of the target scope of this tool (only if lvl is "network"). Default  ""
@@ -69,6 +69,7 @@ class Tool(Element):
         Returns:
             this object
         """
+        self.command_iid = command_iid
         self.name = name
         self.wave = wave
         self.scope = scope
@@ -113,6 +114,7 @@ class Tool(Element):
         if existing is not None:
             return False, existing["_id"]
         # Those are added to base after tool's unicity verification
+        base["command_iid"] = self.command_iid
         base["scanner_ip"] = self.scanner_ip
         base["dated"] = self.dated
         base["datef"] = self.datef
@@ -158,7 +160,7 @@ class Tool(Element):
         """
         apiclient = APIClient.getInstance()
         commandTemplate = apiclient.findInDb(apiclient.getCurrentPentest(),
-                                                 "commands", {"name": self.name}, False)
+                                                 "commands", {"_id": ObjectId(self.command_iid)}, False)
         return commandTemplate
 
     @classmethod

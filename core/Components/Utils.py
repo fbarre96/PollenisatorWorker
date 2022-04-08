@@ -8,6 +8,7 @@ from datetime import datetime
 from threading import Timer
 import json
 import requests
+import signal
 from netaddr import IPNetwork
 from netaddr.core import AddrFormatError
 from bson import ObjectId
@@ -187,6 +188,10 @@ def fitNowTime(dated, datef):
     return today > date_start and date_end > today
 
 
+def handleProcKill(proc):
+    os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
+    proc._killed = True
+
 def execute(command, timeout=None, printStdout=True):
     """
     Execute a bash command and print output
@@ -206,8 +211,10 @@ def execute(command, timeout=None, printStdout=True):
     try:
         proc = subprocess.Popen(
             command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+        proc._killed = False
         time.sleep(1) #HACK Break if not there when launching fast custom tools on local host
         try:
+            timer = None
             if timeout is not None:
                 if isinstance(timeout, float):
                     timeout = (timeout-datetime.now()).total_seconds()
@@ -219,6 +226,10 @@ def execute(command, timeout=None, printStdout=True):
                         timer = Timer(timeout, proc.kill)
                         timer.start()
             stdout, stderr = proc.communicate(None, timeout)
+            if proc._killed:
+                if timer is not None:
+                    timer.cancel()
+                return -1, ""
             if printStdout:
                 stdout = stdout.decode('utf-8')
                 stderr = stderr.decode('utf-8')

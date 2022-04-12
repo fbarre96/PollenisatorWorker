@@ -28,6 +28,7 @@ RUN apt-get update && \
 	apt-get install -y python3-pip && \
 	apt-get install -y nano && \
 	apt-get install -y build-essential
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 10
 RUN wget https://github.com/pypa/get-pip/raw/fa7dc83944936bf09a0e4cb5d5ec852c0d256599/get-pip.py
 RUN python3 get-pip.py
 
@@ -39,10 +40,7 @@ RUN git clone --depth 1 https://github.com/drwetter/testssl.sh.git /home/testssl
 
 
 RUN pip3 install --upgrade setuptools
-# Dirsearch as dirsearch.py
-RUN git clone https://github.com/maurosoria/dirsearch.git /home/dirsearch/ && \
-	chmod +x /home/dirsearch/dirsearch.py && \
-	ln -s /home/dirsearch/dirsearch.py /usr/bin/dirsearch.py
+
 
 # Sublist3r as sublist3r.py
 RUN git clone https://github.com/aboul3la/Sublist3r.git /home/sublist3r/ && \
@@ -97,10 +95,12 @@ RUN ln -sf /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
 #OPenrelay
 COPY tools/smtp-open-relay.nse /usr/share/nmap/scripts/smtp-open-relay.nse
 
-
+# Dirsearch as dirsearch.py
+RUN git clone https://github.com/maurosoria/dirsearch.git /home/dirsearch/ && \
+	chmod +x /home/dirsearch/dirsearch.py && \
+	python3 -m pip install -r /home/dirsearch/requirements.txt && \
+	ln -s /home/dirsearch/dirsearch.py /usr/bin/dirsearch.py
 #CME
-RUN python3.7 /get-pip.py
-RUN rm /get-pip.py
 RUN git clone --recursive https://github.com/byt3bl33d3r/CrackMapExec /home/cme/
 WORKDIR /home/cme/
 RUN python3.7 -m pip install --upgrade pynacl

@@ -109,6 +109,8 @@ def doExecuteCommand(workerToken, calendarName, toolId):
     if "timedout" in toolModel.status:
         timeLimit = None
     try:
+        toolModel.text = comm
+        toolModel.update({"text":comm})
         print(('TASK STARTED:'+toolModel.name))
         print("Will timeout at "+str(timeLimit))
         # Execute the command with a timeout

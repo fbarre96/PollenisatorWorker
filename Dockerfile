@@ -105,6 +105,8 @@ RUN git clone --recursive https://github.com/byt3bl33d3r/CrackMapExec /home/cme/
 WORKDIR /home/cme/
 RUN python3.7 -m pip install --upgrade pynacl
 RUN python3.7 -m pip install --upgrade cryptography
+RUN python3.7 -m pip install --upgrade pycrypto
+RUN python3.7 -m pip install --upgrade pycryptodome
 RUN python3.7 -m pip install --upgrade asn1crypto
 RUN pip install .
 RUN cme smb

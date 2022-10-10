@@ -210,8 +210,10 @@ def execute(command, timeout=None, printStdout=True):
 
     try:
         proc = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
         proc._killed = False
+        signal.signal(signal.SIGINT, lambda _signum, _frame: handleProcKill(proc))
+        signal.signal(signal.SIGTERM, lambda _signum, _frame: handleProcKill(proc))
         time.sleep(1) #HACK Break if not there when launching fast custom tools on local host
         try:
             timer = None
@@ -240,7 +242,7 @@ def execute(command, timeout=None, printStdout=True):
         except Exception as e:
             print(str(e))
             proc.kill()
-            return -1
+            return -1, ""
         finally:
             if timeout is not None:
                 if isinstance(timeout, float):
@@ -248,7 +250,7 @@ def execute(command, timeout=None, printStdout=True):
                 else:
                     if timeout.year < datetime.now().year+1:
                         timer.cancel()
-        return proc.returncode
+        return proc.returncode, stdout
     except KeyboardInterrupt as e:
         raise e
 

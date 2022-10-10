@@ -93,7 +93,6 @@ RUN git clone https://github.com/projectdiscovery/nuclei.git /home/nuclei && cd 
 # Pollenisator
 WORKDIR /home/Pollenisator
 COPY requirements.txt /tmp
-
 # Set timezone
 RUN apt-get install -y tzdata
 ENV TZ Europe/Paris

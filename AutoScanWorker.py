@@ -68,18 +68,16 @@ def doExecuteCommand(workerToken, calendarName, toolId):
     apiclient.currentPentest = calendarName # bypass login by not using connectToDb
     toolModel = Tool.fetchObject({"_id":ObjectId(toolId)})
     command_dict = toolModel.getCommand()
+    if command_dict is None and toolModel.text != "":
+        command_dict = {"plugin":toolModel.plugin_used, "timeout":0}
     msg = ""
     success, comm, fileext = apiclient.getCommandline(toolId)
     if not success:
         print(str(comm))
         toolModel.setStatus(["error"])
         return False, str(comm)
-    bin_path = command_dict["bin_path"]
-    if bin_path is not None:
-        if not bin_path.endswith(" "):
-            bin_path = bin_path+" "
-    comm = bin_path+comm
-    outputRelDir = toolModel.getOutputDir(calendarName)
+    
+    outputRelDir = toolModel.getOutputDir(apiclient.currentPentest)
     abs_path = os.path.dirname(os.path.abspath(__file__))
     toolFileName = toolModel.name+"_" + \
             str(time.time()) # ext already added in command
@@ -97,27 +95,26 @@ def doExecuteCommand(workerToken, calendarName, toolId):
             return False, str(exc)
     outputDir = os.path.join(outputDir, toolFileName)
     comm = comm.replace("|outputDir|", outputDir)
+    toolModel.updateInfos({"cmdline":comm})
     # Get tool's wave time limit searching the wave intervals
     if toolModel.wave == "Custom commands":
         timeLimit = None
     else:
         timeLimit = getWaveTimeLimit(toolModel.wave)
     # adjust timeLimit if the command has a lower timeout
-    if command_dict is not None:
+    if command_dict is not None and timeLimit is not None: 
         timeLimit = min(datetime.now()+timedelta(0, int(command_dict.get("timeout", 0))), timeLimit)
     ##
     if "timedout" in toolModel.status:
         timeLimit = None
     try:
-        toolModel.text = comm
-        toolModel.update({"text":comm})
         print(('TASK STARTED:'+toolModel.name))
         print("Will timeout at "+str(timeLimit))
         # Execute the command with a timeout
-        returncode = Utils.execute(comm, timeLimit, True)
+        returncode, stdout = Utils.execute(comm, timeLimit, True)
         if returncode == -1:
             toolModel.setStatus(["timedout"])
-            return False, str("Command timedout")
+            return False, str("timedout")
     except Exception as e:
         print(str(e))
         toolModel.setStatus(["error"])
@@ -139,7 +136,7 @@ def doExecuteCommand(workerToken, calendarName, toolId):
                 str(float(command_dict.get("sleep_between", 0)))+")"
         print(msg)
         time.sleep(float(command_dict.get("sleep_between", 0)))
-    return True, ""
+    return True, outputfile
 
 @sio.event
 def stopCommand(data):

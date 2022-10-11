@@ -1,19 +1,19 @@
 FROM python:latest
 
 RUN apt-get update
-#NMAP
-RUN apt-get install -y nmap
-# Test SSL as testssl.sh
+#NMAP & dnsrecon
+RUN apt-get install -y nmap dnsrecon 
+# Test SSL as testssl
 RUN apt-get install -y bsdmainutils dnsutils
 RUN git clone --depth 1 https://github.com/drwetter/testssl.sh.git /home/testssl.sh && \
 	chmod +x /home/testssl.sh/testssl.sh && \
-	ln -s /home/testssl.sh/testssl.sh /usr/bin/testssl.sh
+	ln -s /home/testssl.sh/testssl.sh /usr/bin/testssl
 
-# Sublist3r as sublist3r.py
+# Sublist3r as sublist3r
 RUN git clone https://github.com/aboul3la/Sublist3r.git /home/sublist3r/ && \
 	pip install -r /home/sublist3r/requirements.txt && \
 	chmod +x /home/sublist3r/sublist3r.py && \
-	ln -s /home/sublist3r/sublist3r.py /usr/bin/sublist3r.py
+	ln -s /home/sublist3r/sublist3r.py /usr/bin/sublist3r
 # SSH scan as ssh_scan
 RUN apt-get install -y ruby-dev rubygems 
 RUN gem install ssh_scan
@@ -89,6 +89,11 @@ RUN git clone https://github.com/guelfoweb/knock.git /home/knock && \
 RUN wget -c https://go.dev/dl/go1.19.2.linux-amd64.tar.gz -O - | tar xzv -C /usr/local/
 ENV PATH=$PATH:/usr/local/go/bin
 RUN git clone https://github.com/projectdiscovery/nuclei.git /home/nuclei && cd /home/nuclei/v2/cmd/nuclei && go build && mv nuclei /usr/local/bin/ && nuclei -ut
+
+#NIKTO
+RUN git clone https://github.com/sullo/nikto /home/nikto && cd /home/nikto/program && git checkout nikto-2.5.0 && chmod u+x ./nikto.pl && \
+	ln -s /home/nikto/program/nikto.pl /usr/bin/nikto
+
 
 # Pollenisator
 WORKDIR /home/Pollenisator

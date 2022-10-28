@@ -23,7 +23,7 @@ RUN gem install ssh_scan
 COPY tools/crtsh /home/crtsh
 RUN pip install feedparser && \
 	chmod +x /home/crtsh/crtsh.py && \
-	ln -s /home/crtsh/crtsh.py /usr/bin/crtsh.py
+	ln -s /home/crtsh/crtsh.py /usr/bin/crtsh
 
 # amap as amap
 RUN git clone https://github.com/BlackArch/amap/ /home/amap/

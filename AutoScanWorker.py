@@ -31,7 +31,8 @@ def main():
         print("Unable to reach the API "+str(apiclient.api_url))
         sys.exit(0)
     myname = os.getenv('POLLENISATOR_WORKER_NAME', str(uuid.uuid4())+"@"+socket.gethostname())
-    sio.emit("register", {"name":myname})
+    toolsCfg = Utils.loadToolsConfig()
+    sio.emit("register", {"name":myname, "binaries":toolsCfg})
     sio.wait()
     apiclient.unregisterWorker(myname)
   

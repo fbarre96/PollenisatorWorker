@@ -140,6 +140,15 @@ class APIClient():
         else:
             return None
 
+    def getCommands(self):
+        api_url = '{0}commands/find'.format(self.api_url_base)
+        response = requests.get(api_url, headers=self.headers)
+        if response.status_code == 200:
+            return json.loads(response.content.decode('utf-8'), cls=JSONDecoder)
+        else:
+            return None
+
+
     def getRegisteredCommands(self, workerName):
         api_url = '{0}workers/{1}/getRegisteredCommands'.format(self.api_url_base, workerName)
         response = requests.get(api_url, headers=self.headers)

@@ -315,8 +315,7 @@ def loadToolsConfig():
                 try:
                     with open(default_tools_config) as f:
                         tools_infos = json.loads(f.read())
-                        for key, value in tools_infos.items():
-                            default_tools_infos[key] = value
+                        default_tools_infos = list(set(default_tools_infos + tools_infos))
                 except json.JSONDecodeError:
                     print("Invalid json file : "+str(fil))
     return default_tools_infos

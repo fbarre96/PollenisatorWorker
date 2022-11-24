@@ -53,7 +53,7 @@ RUN git clone https://github.com/robertdavidgraham/rdpscan /home/rdpscan && cd /
 # EternalBlue
 RUN wget https://svn.nmap.org/nmap/scripts/smb-vuln-ms17-010.nse -O /usr/share/nmap/scripts/smb-vuln-ms17-010.nse
 #Searchsploit
-RUN git clone https://github.com/offensive-security/exploitdb.git /opt/exploitdb
+RUN git clone https://gitlab.com/exploit-database/exploitdb /opt/exploitdb
 RUN sed 's|path_array+=(.*)|path_array+=("/opt/exploitdb")|g' /opt/exploitdb/.searchsploit_rc > ~/.searchsploit_rc
 RUN ln -sf /opt/exploitdb/searchsploit /usr/local/bin/searchsploit
 #OPenrelay

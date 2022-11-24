@@ -32,7 +32,7 @@ def main():
         sys.exit(0)
     myname = os.getenv('POLLENISATOR_WORKER_NAME', str(uuid.uuid4())+"@"+socket.gethostname())
     toolsCfg = Utils.loadToolsConfig()
-    sio.emit("register", {"name":myname, "binaries":toolsCfg})
+    sio.emit("register", {"name":myname, "binaries":list(toolsCfg.keys())})
     sio.wait()
     apiclient.unregisterWorker(myname)
   
@@ -47,6 +47,15 @@ def executeCommand(data):
     running_tasks.append([pentest, toolId, task])
     task.start()
 
+@sio.event
+def deleteWorker(data):
+    global running_tasks
+    i = 0
+    for running in running_tasks:
+        running[2].terminate()
+        running[2].join()
+        break
+    sio.disconnect()
 def doExecuteCommand(workerToken, calendarName, toolId):
     """
     remote task
@@ -96,6 +105,13 @@ def doExecuteCommand(workerToken, calendarName, toolId):
             return False, str(exc)
     outputDir = os.path.join(outputDir, toolFileName)
     comm = comm.replace("|outputDir|", outputDir)
+    toolsCfg = Utils.loadToolsConfig()
+    bin_path = toolsCfg.get(command_dict.get("bin_path"))
+    if bin_path is None:
+        toolModel.setStatus(["error"])
+        toolModel.notes = str(toolModel.name)+" : no binary path setted"
+        return False, str(toolModel.name)+" : no binary path setted"
+    comm = bin_path + " " + comm
     toolModel.updateInfos({"cmdline":comm})
     # Get tool's wave time limit searching the wave intervals
     if toolModel.wave == "Custom commands":

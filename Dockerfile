@@ -63,7 +63,7 @@ COPY tools/smtp-open-relay.nse /usr/share/nmap/scripts/smtp-open-relay.nse
 RUN git clone https://github.com/maurosoria/dirsearch.git /home/dirsearch/ && \
 	chmod +x /home/dirsearch/dirsearch.py && \
 	python -m pip install -r /home/dirsearch/requirements.txt && \
-	ln -s /home/dirsearch/dirsearch.py /usr/bin/dirsearch.py
+	ln -s /home/dirsearch/dirsearch.py /usr/bin/dirsearch
 #CME
 # RUN git clone --recursive https://github.com/byt3bl33d3r/CrackMapExec /home/cme/
 # WORKDIR /home/cme/

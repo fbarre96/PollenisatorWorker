@@ -7,9 +7,10 @@ import ssl
 import sys
 import uuid
 import time
+import threading
 from datetime import datetime, timedelta
 from bson.objectid import ObjectId
-from multiprocessing import Process
+from multiprocessing import Process, Queue
 from core.Components.apiclient import APIClient
 import core.Components.Utils as Utils
 from core.Models.Interval import Interval
@@ -18,7 +19,19 @@ import socketio
 import socket
 
 sio = socketio.Client()
-running_tasks = []
+running_tasks = {}
+myname = ""
+
+def beacon():
+    global sio
+    global running_tasks
+    global myname
+    pentest = ""
+    if running_tasks:
+        pentest = running_tasks[0][0] # pentest
+    sio.emit("keepalive", {"name":myname, "running_tasks":[str(x) for x in running_tasks]})
+    timer = threading.Timer(5.0, beacon)
+    timer.start()
 
 def main():
     """Main function. Start a worker instance
@@ -30,9 +43,12 @@ def main():
     else:
         print("Unable to reach the API "+str(apiclient.api_url))
         sys.exit(0)
+    global myname
     myname = os.getenv('POLLENISATOR_WORKER_NAME', str(uuid.uuid4())+"@"+socket.gethostname())
     toolsCfg = Utils.loadToolsConfig()
     sio.emit("register", {"name":myname, "binaries":list(toolsCfg.keys())})
+    timer = threading.Timer(5.0, beacon)
+    timer.start()
     sio.wait()
     apiclient.unregisterWorker(myname)
   
@@ -42,21 +58,45 @@ def executeCommand(data):
     workerToken = data.get("workerToken")
     pentest = data.get("pentest")
     toolId = data.get("toolId")
-    task = Process(target=doExecuteCommand, args=[workerToken, pentest, toolId]) 
+    infos = data.get("infos")
+    q = Queue()
+    q_resp = Queue()
+    task = Process(target=doExecuteCommand, args=[workerToken, pentest, toolId, q, q_resp, infos]) 
     global running_tasks
-    running_tasks.append([pentest, toolId, task])
+    
+    running_tasks[toolId] = [pentest, toolId, task, q, q_resp]
     task.start()
 
 @sio.event
 def deleteWorker(data):
     global running_tasks
     i = 0
-    for running in running_tasks:
+    for running in running_tasks.values():
         running[2].terminate()
         running[2].join()
         break
     sio.disconnect()
-def doExecuteCommand(workerToken, calendarName, toolId):
+
+@sio.event
+def getProgress(data): 
+    toolId = data.get("tool_iid")
+    msg = getToolProgress(toolId)
+    print(msg)
+    sio.emit("getProgressResult", {"result":msg})
+
+def getToolProgress(toolId):
+    global running_tasks
+    pentest, toolId, task, q, q_resp= running_tasks.get(str(toolId), (None, None,None, None, None))
+    if task is None or q is None:
+        return ""
+    progress = ""
+    if task.is_alive():
+        q.put("\n")
+        progress = q_resp.get()
+        return progress
+    return ""
+
+def doExecuteCommand(workerToken, calendarName, toolId, queue, queueResponse, infos):
     """
     remote task
     Execute the tool with the given toolId on the given calendar name.
@@ -113,6 +153,9 @@ def doExecuteCommand(workerToken, calendarName, toolId):
         return False, str(toolModel.name)+" : no binary path setted"
     comm = bin_path + " " + comm
     toolModel.updateInfos({"cmdline":comm})
+    ##
+    if "timedout" in toolModel.status:
+        timeLimit = None
     # Get tool's wave time limit searching the wave intervals
     if toolModel.wave == "Custom commands":
         timeLimit = None
@@ -121,14 +164,15 @@ def doExecuteCommand(workerToken, calendarName, toolId):
     # adjust timeLimit if the command has a lower timeout
     if command_dict is not None and timeLimit is not None: 
         timeLimit = min(datetime.now()+timedelta(0, int(command_dict.get("timeout", 0))), timeLimit)
-    ##
-    if "timedout" in toolModel.status:
-        timeLimit = None
+    
     try:
+        global myname
+        
+        toolModel.markAsRunning(myname, infos)
         print(('TASK STARTED:'+toolModel.name))
         print("Will timeout at "+str(timeLimit))
         # Execute the command with a timeout
-        returncode, stdout = Utils.execute(comm, timeLimit, True)
+        returncode, stdout = Utils.execute(comm, timeLimit, True, queue, queueResponse)
         if returncode == -1:
             toolModel.setStatus(["timedout"])
             return False, str("timedout")
@@ -161,16 +205,18 @@ def stopCommand(data):
     tool_iid = data.get("tool_iid")
     global running_tasks
     i = 0
-    for running in running_tasks:
+    deleted = None
+    for key, running in running_tasks.items():
         if running[0] == pentest and running[1] == tool_iid:
             print("STOPPING command "+str(tool_iid)+" ...")
             running[2].terminate()
             running[2].join()
+            deleted = key
             print("STOPPING command "+str(tool_iid)+" ... Done")
             break
         i += 1
     if i < len(running_tasks):
-        del running_tasks[i]
+        del running_tasks[deleted]
 
 
 # @sio.event

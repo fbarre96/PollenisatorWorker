@@ -199,7 +199,6 @@ class Tool(Element):
             output_dir += Tool.__sanitize(port_dir)+"/"
         return output_dir
 
-    
 
     def update(self, pipeline_set=None):
         """Update this object in database.
@@ -209,7 +208,7 @@ class Tool(Element):
         apiclient = APIClient.getInstance()
         if pipeline_set is None:
             apiclient.update("tools", ObjectId(self._id), {"scanner_ip": str(self.scanner_ip), "dated": str(self.dated), "status": self.status,
-                         "datef":  str(self.datef), "notes":  self.notes, "resultfile": self.resultfile, "tags": self.tags})
+                         "datef":  str(self.datef), "notes":  self.notes, "resultfile": self.resultfile, "tags": self.tags, "infos":self.infos})
         else:
             apiclient.update(
                 "tools", ObjectId(self._id), pipeline_set)
@@ -271,7 +270,7 @@ class Tool(Element):
 
     
 
-    def markAsRunning(self, workerName):
+    def markAsRunning(self, workerName, infos):
         """Set this tool status as running but keeps OOT or OOS.
         Sets the starting date to current time and ending date to "None"
         Args:
@@ -286,6 +285,7 @@ class Tool(Element):
             newStatus.append("OOT")
         self.status = newStatus
         self.scanner_ip = workerName
+        self.infos.update(infos)
         self.update()
 
     def markAsNotDone(self):

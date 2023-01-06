@@ -192,7 +192,7 @@ def handleProcKill(proc):
     os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
     proc._killed = True
 
-def execute(command, timeout=None, printStdout=True):
+def execute(command, timeout=None, printStdout=True, queue=None, queueResponse=None):
     """
     Execute a bash command and print output
 
@@ -210,11 +210,11 @@ def execute(command, timeout=None, printStdout=True):
 
     try:
         proc = subprocess.Popen(
-            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE, shell=True, preexec_fn=os.setsid)
         proc._killed = False
         signal.signal(signal.SIGINT, lambda _signum, _frame: handleProcKill(proc))
         signal.signal(signal.SIGTERM, lambda _signum, _frame: handleProcKill(proc))
-        time.sleep(1) #HACK Break if not there when launching fast custom tools on local host
+        time.sleep(1) #HACK Break if not there when launching fast custom tools on local host for unknown reason
         try:
             timer = None
             if timeout is not None:
@@ -222,13 +222,30 @@ def execute(command, timeout=None, printStdout=True):
                     timeout = (timeout-datetime.now()).total_seconds()
                     timer = Timer(timeout, proc.kill)
                     timer.start()
+                    print("Utils execute: timer start "+str(timeout))
                 else:
                     if timeout.year < datetime.now().year+1:
                         timeout = (timeout-datetime.now()).total_seconds()
                         timer = Timer(timeout, proc.kill)
                         timer.start()
+                        print("Utils execute: timer start "+str(timeout))
+                    else:
+                        timeout = None
+            print(f"Utils execute: timeout:{timeout} command:{command}")
+            output = b""
+            os.set_blocking(proc.stdout.fileno(), False)
+            os.set_blocking(proc.stdin.fileno(), False)
+            while proc.poll() is None:
+                if queue is not None and queue.qsize() > 0:
+                    key = queue.get()
+                    proc.stdin.write(key.encode())
+                    data = proc.stdout.read()
+                    queueResponse.put(data)
+                    time.sleep(0.5)
             stdout, stderr = proc.communicate(None, timeout)
+            queueResponse.put(stdout)
             if proc._killed:
+                print(f"Utils execute: command killed command:{command}")
                 if timer is not None:
                     timer.cancel()
                 return -1, ""
@@ -240,7 +257,10 @@ def execute(command, timeout=None, printStdout=True):
                 if str(stderr) != "":
                     print(str(stderr))
         except Exception as e:
-            print(str(e))
+            import traceback
+            print(f"Utils execute: command ended with exception {repr(e)}")
+            traceback.print_exc(file=sys.stdout)
+            print(repr(e))
             proc.kill()
             return -1, ""
         finally:

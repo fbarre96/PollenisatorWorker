@@ -1,5 +1,0 @@
-netaddr>=0.7.19
-bson
-python-jose
-requests
-python-socketio[client]

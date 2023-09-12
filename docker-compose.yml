@@ -1,0 +1,12 @@
+version: '3'
+services:
+    python:
+      image: python:latest
+    pollenisator-worker:
+        container_name: pollenisator-worker
+        build: .
+        depends_on:
+          - python
+        volumes:
+          - ./:/home/Pollenisator
+
